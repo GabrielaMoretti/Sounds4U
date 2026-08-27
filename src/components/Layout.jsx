@@ -1,20 +1,22 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { useSpotify } from '../context/SpotifyContext'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
+  { to: '/feed', label: 'Feed' },
   { to: '/history', label: 'Histórico' },
   { to: '/reviews', label: 'Reviews' },
   { to: '/friends', label: 'Amigos' },
+  { to: '/messages', label: 'Mensagens' },
 ]
 
 export default function Layout() {
-  const { connected, profile, disconnect } = useSpotify()
+  const { connected, profile, logout } = useAuth()
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <NavLink to="/" className="brand">
-          musics2u
+          Sounds4U
         </NavLink>
         <nav className="nav">
           {navItems.map((item) => (
@@ -30,14 +32,16 @@ export default function Layout() {
         <div className="account">
           {connected ? (
             <>
-              <span className="account-name">{profile?.display_name ?? 'Conectado'}</span>
-              <button className="btn-ghost" onClick={disconnect}>
-                Desconectar
+              <NavLink to="/profile" className="account-name">
+                {profile?.display_name ?? profile?.username ?? 'Conectado'}
+              </NavLink>
+              <button className="btn-ghost" onClick={logout}>
+                Sair
               </button>
             </>
           ) : (
             <NavLink to="/" className="btn-ghost">
-              Conectar Spotify
+              Entrar
             </NavLink>
           )}
         </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { useSpotify } from '../context/SpotifyContext'
-import { getRecentlyPlayed, getCurrentlyPlaying } from '../lib/spotify'
+import { useAuth } from '../context/AuthContext'
+import { getRecentlyPlayed, getCurrentlyPlaying, SpotifyReauthRequired } from '../lib/spotify'
+import { recordPlays } from '../lib/listeningHistoryApi'
 import TrackRow from '../components/TrackRow'
 
 function formatPlayedAt(iso) {
@@ -10,26 +11,47 @@ function formatPlayedAt(iso) {
 }
 
 export default function History() {
-  const { connected } = useSpotify()
+  const { connected, user, loginWithSpotify } = useAuth()
   const [history, setHistory] = useState([])
   const [nowPlaying, setNowPlaying] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [needsReauth, setNeedsReauth] = useState(false)
 
   useEffect(() => {
-    if (!connected) return
+    if (!connected || !user) return
     setLoading(true)
-    Promise.all([getRecentlyPlayed(30), getCurrentlyPlaying()])
+    Promise.all([getRecentlyPlayed(user.id, 30), getCurrentlyPlaying(user.id)])
       .then(([recent, current]) => {
         setHistory(recent)
         setNowPlaying(current)
         setError(null)
+        setNeedsReauth(false)
+        recordPlays(user.id, recent).catch((err) => console.error('Falha ao salvar histórico:', err))
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (err instanceof SpotifyReauthRequired) setNeedsReauth(true)
+        else setError(err.message)
+      })
       .finally(() => setLoading(false))
-  }, [connected])
+  }, [connected, user])
 
   if (!connected) return <Navigate to="/" replace />
+
+  if (needsReauth) {
+    return (
+      <div className="page">
+        <h2>Histórico de escuta</h2>
+        <div className="notice">
+          Sua sessão do Spotify expirou (o token dura 1h). Reconecte pra continuar vendo o
+          histórico.
+        </div>
+        <button className="btn-primary" onClick={loginWithSpotify}>
+          Reconectar com Spotify
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="page">

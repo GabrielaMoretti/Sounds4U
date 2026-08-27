@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useSpotify } from '../context/SpotifyContext'
-import { searchTracks } from '../lib/spotify'
-import { listReviews, upsertReview, deleteReview } from '../lib/localStore'
-import { isSupabaseConfigured } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { listMyReviews, upsertReview, deleteReview } from '../lib/reviewsApi'
 import TrackRow from '../components/TrackRow'
+import TrackPicker from '../components/TrackPicker'
 
 function Stars({ value, onChange }) {
   return (
@@ -25,93 +24,79 @@ function Stars({ value, onChange }) {
 }
 
 export default function Reviews() {
-  const { connected } = useSpotify()
+  const { connected, user, loginWithSpotify } = useAuth()
   const location = useLocation()
 
   const [selectedTrack, setSelectedTrack] = useState(location.state?.track ?? null)
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
   const [rating, setRating] = useState(0)
   const [body, setBody] = useState('')
-  const [reviews, setReviews] = useState(listReviews())
+  const [reviews, setReviews] = useState([])
+  const [needsReauth, setNeedsReauth] = useState(false)
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    if (!query.trim() || !connected) {
-      setResults([])
-      return
-    }
-    const handle = setTimeout(() => {
-      searchTracks(query).then(setResults).catch(() => setResults([]))
-    }, 350)
-    return () => clearTimeout(handle)
-  }, [query, connected])
+  function refreshReviews() {
+    if (!user) return
+    listMyReviews(user.id).then(setReviews).catch((err) => setError(err.message))
+  }
+
+  useEffect(refreshReviews, [user])
 
   function pickTrack(track) {
     setSelectedTrack(track)
-    setResults([])
-    setQuery('')
+    if (!track) return
     const existing = reviews.find((r) => r.trackId === track.id)
     setRating(existing?.rating ?? 0)
     setBody(existing?.body ?? '')
   }
 
-  function saveReview() {
-    if (!selectedTrack || rating === 0) return
-    const record = upsertReview({ track: selectedTrack, rating, body })
-    setReviews(listReviews())
-    setSelectedTrack(null)
-    setRating(0)
-    setBody('')
-    return record
+  async function saveReview() {
+    if (!selectedTrack || rating === 0 || !user) return
+    try {
+      await upsertReview({ userId: user.id, track: selectedTrack, rating, body })
+      refreshReviews()
+      setSelectedTrack(null)
+      setRating(0)
+      setBody('')
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
-  function removeReview(id) {
-    deleteReview(id)
-    setReviews(listReviews())
+  async function removeReview(trackId) {
+    if (!user) return
+    await deleteReview(user.id, trackId)
+    refreshReviews()
   }
 
   return (
     <div className="page">
       <h2>Reviews</h2>
-      {!isSupabaseConfigured && (
-        <div className="notice">
-          Supabase ainda não configurado — reviews estão salvas só neste navegador
-          (localStorage), como placeholder.
-        </div>
-      )}
+      {error && <div className="notice">{error}</div>}
 
       <section className="review-composer">
         <h3>Nova review</h3>
         {!connected && <p>Conecte o Spotify para buscar músicas.</p>}
 
-        {connected && !selectedTrack && (
-          <>
-            <input
-              className="search-input"
-              placeholder="Buscar música ou artista…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="track-list">
-              {results.map((track) => (
-                <div key={track.id} onClick={() => pickTrack(track)} className="track-row-clickable">
-                  <TrackRow track={track} />
-                </div>
-              ))}
-            </div>
-          </>
+        {needsReauth && (
+          <div className="notice">
+            Sessão do Spotify expirou.{' '}
+            <button className="btn-ghost" onClick={loginWithSpotify}>
+              Reconectar
+            </button>
+          </div>
+        )}
+
+        {connected && (
+          <TrackPicker
+            userId={user?.id}
+            selectedTrack={selectedTrack}
+            onSelect={pickTrack}
+            onReauthRequired={() => setNeedsReauth(true)}
+          />
         )}
 
         {selectedTrack && (
           <div className="review-form">
-            <TrackRow
-              track={selectedTrack}
-              actions={
-                <button className="btn-ghost" onClick={() => setSelectedTrack(null)}>
-                  Trocar
-                </button>
-              }
-            />
             <Stars value={rating} onChange={setRating} />
             <textarea
               placeholder="O que você achou?"
@@ -140,7 +125,7 @@ export default function Reviews() {
                   <button className="btn-ghost" onClick={() => pickTrack(r.track)}>
                     Editar
                   </button>
-                  <button className="btn-ghost" onClick={() => removeReview(r.id)}>
+                  <button className="btn-ghost" onClick={() => removeReview(r.trackId)}>
                     Excluir
                   </button>
                 </>

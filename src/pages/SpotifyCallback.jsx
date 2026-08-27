@@ -1,36 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { handleSpotifyCallback } from '../lib/spotify'
-import { useSpotify } from '../context/SpotifyContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function SpotifyCallback() {
+  const { connected, loading } = useAuth()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { refreshProfile } = useSpotify()
   const [error, setError] = useState(null)
-  const ranOnce = useRef(false)
 
   useEffect(() => {
-    if (ranOnce.current) return
-    ranOnce.current = true
+    const oauthError = searchParams.get('error_description') || searchParams.get('error')
+    if (oauthError) setError(oauthError)
+  }, [searchParams])
 
-    const code = searchParams.get('code')
-    const oauthError = searchParams.get('error')
-
-    if (oauthError) {
-      setError(`Spotify recusou a autorização: ${oauthError}`)
-      return
-    }
-    if (!code) {
-      setError('Código de autorização ausente no redirect.')
-      return
-    }
-
-    handleSpotifyCallback(code)
-      .then(() => refreshProfile())
-      .then(() => navigate('/history', { replace: true }))
-      .catch((err) => setError(err.message))
-  }, [searchParams, navigate, refreshProfile])
+  useEffect(() => {
+    if (!loading && connected) navigate('/feed', { replace: true })
+  }, [loading, connected, navigate])
 
   if (error) {
     return (

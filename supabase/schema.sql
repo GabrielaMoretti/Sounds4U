@@ -1,4 +1,4 @@
--- Musics2U schema
+-- Sounds4U schema
 -- Run in Supabase SQL editor (or via `supabase db push`)
 
 create extension if not exists "uuid-ossp";

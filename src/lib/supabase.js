@@ -9,7 +9,7 @@ export const isSupabaseConfigured = Boolean(
 
 if (!isSupabaseConfigured) {
   console.warn(
-    '[musics2u] Supabase não configurado — copie .env.example para .env e preencha ' +
+    '[sounds4u] Supabase não configurado — copie .env.example para .env e preencha ' +
       'VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (projeto novo, conta separada do STRM Insight). ' +
       'Reviews e amigos usam localStorage como placeholder até lá.'
   )

@@ -1,29 +1,29 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useSpotify } from '../context/SpotifyContext'
-import { startSpotifyLogin, isSpotifyConfigured } from '../lib/spotify'
+import { useAuth } from '../context/AuthContext'
+import { isSupabaseConfigured } from '../lib/supabase'
 
 export default function Login() {
-  const { connected } = useSpotify()
+  const { connected, loginWithSpotify } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (connected) navigate('/history', { replace: true })
+    if (connected) navigate('/feed', { replace: true })
   }, [connected, navigate])
 
   return (
     <div className="login-screen">
-      <h1>musics2u</h1>
+      <h1>Sounds4U</h1>
       <p className="subtitle">Letterboxd, mas para música. Conecte seu Spotify para começar.</p>
 
-      {!isSpotifyConfigured && (
+      {!isSupabaseConfigured && (
         <div className="notice">
-          Spotify não configurado. Preencha <code>VITE_SPOTIFY_CLIENT_ID</code> e{' '}
-          <code>VITE_SPOTIFY_REDIRECT_URI</code> no <code>.env</code> (veja <code>.env.example</code>).
+          Supabase não configurado. Preencha <code>VITE_SUPABASE_URL</code> e{' '}
+          <code>VITE_SUPABASE_ANON_KEY</code> no <code>.env</code> (veja <code>.env.example</code>).
         </div>
       )}
 
-      <button className="btn-primary" disabled={!isSpotifyConfigured} onClick={startSpotifyLogin}>
+      <button className="btn-primary" disabled={!isSupabaseConfigured} onClick={loginWithSpotify}>
         Conectar com Spotify
       </button>
 
