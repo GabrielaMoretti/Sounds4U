@@ -50,6 +50,9 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+      <footer className="footer">
+        <NavLink to="/privacy">Política de Privacidade</NavLink>
+      </footer>
     </div>
   )
 }

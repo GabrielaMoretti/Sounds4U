@@ -12,6 +12,7 @@ import Messages from './pages/Messages'
 import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import TrackDetail from './pages/TrackDetail'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/messages/:username" element={<Messages />} />
         <Route path="/u/:username" element={<PublicProfile />} />
         <Route path="/post/:postId" element={<PostDetail />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
       </Route>
     </Routes>
   )
