@@ -1,0 +1,282 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0d;
+  --surface: #17171b;
+  --border: #2a2a30;
+  --text: #f2f2f5;
+  --text-dim: #9a9aa2;
+  --accent: #1db954;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.nav-link {
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: var(--text-dim);
+}
+
+.nav-link:hover {
+  color: var(--text);
+}
+
+.nav-link.active {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.account-name {
+  color: var(--text-dim);
+}
+
+.content {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.page h2 {
+  margin-top: 0;
+}
+
+.login-screen {
+  max-width: 480px;
+  margin: 15vh auto 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.login-screen h1 {
+  font-size: 2rem;
+  margin-bottom: 0;
+}
+
+.subtitle {
+  color: var(--text-dim);
+  margin-top: 0;
+}
+
+.dsp-note {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #06120a;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 28px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+.notice {
+  background: #2a2412;
+  border: 1px solid #55491d;
+  color: #e5cf7c;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.track-row-clickable {
+  cursor: pointer;
+}
+
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.track-row:hover {
+  background: var(--surface);
+}
+
+.track-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.track-art.placeholder {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.track-meta {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.track-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.now-playing {
+  margin-bottom: 28px;
+}
+
+.search-input,
+.add-friend-form input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.review-composer {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 28px;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-form textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+  font-family: inherit;
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+}
+
+.star {
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--border);
+  padding: 0;
+  line-height: 1;
+}
+
+.star.filled {
+  color: var(--accent);
+}
+
+.add-friend-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.add-friend-form input {
+  margin-bottom: 0;
+}
