@@ -119,6 +119,7 @@ export default function Reviews() {
             <TrackRow
               key={r.id}
               track={r.track}
+              linkTo={`/track/${r.trackId}`}
               meta={`${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}${r.body ? ` — ${r.body}` : ''}`}
               actions={
                 <>

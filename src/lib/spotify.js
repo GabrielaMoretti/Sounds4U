@@ -66,6 +66,11 @@ export async function searchTracks(userId, query, limit = 10) {
   return (data?.tracks?.items ?? []).map(normalizeTrack)
 }
 
+export async function getTrackById(userId, trackId) {
+  const data = await spotifyFetch(userId, `/tracks/${trackId}`)
+  return normalizeTrack(data)
+}
+
 export function normalizeTrack(track) {
   return {
     id: track.id,

@@ -3,14 +3,16 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { listAcceptedFriendIds } from '../lib/friendsApi'
 import { listFeed, createPost, getEngagement } from '../lib/postsApi'
+import { listReviewsForUsers } from '../lib/reviewsApi'
 import TrackPicker from '../components/TrackPicker'
 import FeedPost from '../components/FeedPost'
+import FeedReviewItem from '../components/FeedReviewItem'
 
 export default function Feed() {
   const { connected, user } = useAuth()
   const [track, setTrack] = useState(null)
   const [body, setBody] = useState('')
-  const [posts, setPosts] = useState([])
+  const [items, setItems] = useState([])
   const [engagement, setEngagement] = useState({})
   const [error, setError] = useState(null)
   const [needsReauth, setNeedsReauth] = useState(false)
@@ -20,8 +22,12 @@ export default function Feed() {
     if (!user) return
     try {
       const friendIds = await listAcceptedFriendIds(user.id)
-      const feedPosts = await listFeed([user.id, ...friendIds])
-      setPosts(feedPosts)
+      const ids = [user.id, ...friendIds]
+      const [feedPosts, feedReviews] = await Promise.all([listFeed(ids), listReviewsForUsers(ids)])
+      const merged = [...feedPosts, ...feedReviews].sort(
+        (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
+      )
+      setItems(merged)
       setEngagement(await getEngagement(feedPosts.map((p) => p.id), user.id))
     } catch (err) {
       setError(err.message)
@@ -81,10 +87,14 @@ export default function Feed() {
       </section>
 
       <section>
-        {posts.length === 0 && <p>Nada por aqui ainda — adicione amigos ou seja o primeiro a postar.</p>}
-        {posts.map((p) => (
-          <FeedPost key={p.id} post={p} userId={user.id} engagement={engagement[p.id]} onChanged={refresh} />
-        ))}
+        {items.length === 0 && <p>Nada por aqui ainda — adicione amigos ou seja o primeiro a postar.</p>}
+        {items.map((item) =>
+          item.type === 'review' ? (
+            <FeedReviewItem key={`review-${item.id}`} review={item} />
+          ) : (
+            <FeedPost key={`post-${item.id}`} post={item} userId={user.id} engagement={engagement[item.id]} onChanged={refresh} />
+          )
+        )}
       </section>
     </div>
   )

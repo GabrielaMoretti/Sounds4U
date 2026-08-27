@@ -72,6 +72,7 @@ export async function listFeed(userIds) {
 
   return rows.map((row) => ({
     id: row.id,
+    type: 'post',
     userId: row.user_id,
     body: row.body,
     createdAt: row.created_at,

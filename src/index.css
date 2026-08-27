@@ -190,6 +190,14 @@ button {
   min-width: 0;
 }
 
+.track-row-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
 .track-name {
   font-weight: 600;
   white-space: nowrap;

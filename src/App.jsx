@@ -10,6 +10,8 @@ import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
 import Messages from './pages/Messages'
 import PostDetail from './pages/PostDetail'
+import Search from './pages/Search'
+import TrackDetail from './pages/TrackDetail'
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
         <Route path="/feed" element={<Feed />} />
         <Route path="/history" element={<History />} />
         <Route path="/reviews" element={<Reviews />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/track/:trackId" element={<TrackDetail />} />
         <Route path="/friends" element={<Friends />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/messages" element={<Messages />} />
