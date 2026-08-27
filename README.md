@@ -21,6 +21,12 @@ Limitação atual: o token do Spotify dura 1h e a gente ainda não implementou r
 (precisaria de uma function serverless guardando o Client Secret, que não pode ir pro bundle do
 navegador). Quando expira, a UI pede pra reconectar. Isso é um bom próximo passo.
 
+**Apps novos do Spotify nascem em "Development Mode"**: só contas explicitamente cadastradas em
+Spotify Dashboard → app → Settings → User Management conseguem logar (até 25, a dona do app entra
+automática). Qualquer outra conta recebe "Error getting user profile from external provider" ao
+tentar conectar. Pra abrir de verdade pro público é preciso pedir Extended Quota Mode pro Spotify
+(revisão deles, não é imediato) — até lá, cadastrar manualmente quem for testar.
+
 ## Setup
 
 ```bash
