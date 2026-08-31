@@ -495,6 +495,44 @@ button {
   margin-bottom: 8px;
 }
 
+.bell {
+  position: relative;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #e05a5a;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+.notification-row.unread {
+  background: var(--surface);
+}
+
+.notification-row.unread .track-name::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 8px;
+}
+
 .feed-post-actions {
   display: flex;
   gap: 8px;

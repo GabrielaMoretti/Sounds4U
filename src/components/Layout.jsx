@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useNotifications } from '../context/NotificationsContext'
 
 const navItems = [
   { to: '/feed', label: 'Feed' },
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function Layout() {
   const { connected, profile, logout } = useAuth()
+  const { unreadCount } = useNotifications()
 
   return (
     <div className="app-shell">
@@ -33,6 +35,10 @@ export default function Layout() {
         <div className="account">
           {connected ? (
             <>
+              <NavLink to="/notifications" className="bell" aria-label="Notificações">
+                🔔
+                {unreadCount > 0 && <span className="bell-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+              </NavLink>
               <NavLink to="/profile" className="account-name">
                 {profile?.display_name ?? profile?.username ?? 'Conectado'}
               </NavLink>

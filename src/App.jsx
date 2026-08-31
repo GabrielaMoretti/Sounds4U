@@ -13,6 +13,7 @@ import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import TrackDetail from './pages/TrackDetail'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import Notifications from './pages/Notifications'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/u/:username" element={<PublicProfile />} />
         <Route path="/post/:postId" element={<PostDetail />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
     </Routes>
   )
