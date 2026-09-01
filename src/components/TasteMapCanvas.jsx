@@ -9,7 +9,7 @@ const OWNER_COLOR = {
   both: '#f2b705',
 }
 
-export default function TasteMapCanvas({ nodes, edges, onNodeClick }) {
+export default function TasteMapCanvas({ nodes, edges, selectedIds = [], onNodeClick }) {
   const svgRef = useRef(null)
   const circleRefs = useRef(new Map())
   const lineRefs = useRef(new Map())
@@ -216,7 +216,7 @@ export default function TasteMapCanvas({ nodes, edges, onNodeClick }) {
                 else circleRefs.current.delete(n.id)
               }}
               r={6 + Math.sqrt(n.weight) * 2}
-              className="taste-node"
+              className={`taste-node${selectedIds.includes(n.id) ? ' taste-node-selected' : ''}`}
               style={{ fill: n.color ?? OWNER_COLOR[n.owner] ?? OWNER_COLOR.me }}
               onPointerDown={(e) => handleNodePointerDown(e, n.id)}
               onPointerUp={(e) => handlePointerUp(e, n.id)}
