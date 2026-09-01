@@ -217,7 +217,7 @@ export default function TasteMapCanvas({ nodes, edges, onNodeClick }) {
               }}
               r={6 + Math.sqrt(n.weight) * 2}
               className="taste-node"
-              style={{ fill: OWNER_COLOR[n.owner] ?? OWNER_COLOR.me }}
+              style={{ fill: n.color ?? OWNER_COLOR[n.owner] ?? OWNER_COLOR.me }}
               onPointerDown={(e) => handleNodePointerDown(e, n.id)}
               onPointerUp={(e) => handlePointerUp(e, n.id)}
             />

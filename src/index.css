@@ -602,6 +602,28 @@ button {
   stroke-opacity: 0.35;
 }
 
+.genre-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.genre-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.genre-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .taste-map-selected {
   margin-top: 16px;
   border: 1px solid var(--border);
