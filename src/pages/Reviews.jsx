@@ -4,24 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { listMyReviews, upsertReview, deleteReview } from '../lib/reviewsApi'
 import TrackRow from '../components/TrackRow'
 import TrackPicker from '../components/TrackPicker'
-
-function Stars({ value, onChange }) {
-  return (
-    <div className="stars">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          className={`star${n <= value ? ' filled' : ''}`}
-          onClick={() => onChange(n)}
-          aria-label={`${n} estrelas`}
-        >
-          ★
-        </button>
-      ))}
-    </div>
-  )
-}
+import Stars from '../components/Stars'
 
 export default function Reviews() {
   const { connected, user, loginWithSpotify } = useAuth()

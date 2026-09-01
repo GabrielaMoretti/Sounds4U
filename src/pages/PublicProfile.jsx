@@ -3,26 +3,35 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getProfileByUsername } from '../lib/profilesApi'
 import { listUserReviews } from '../lib/reviewsApi'
+import { listFeed, getEngagement } from '../lib/postsApi'
 import { getFriendship, sendFriendRequest, acceptFriendRequest } from '../lib/friendsApi'
-import TrackRow from '../components/TrackRow'
+import FeedPost from '../components/FeedPost'
+import FeedReviewItem from '../components/FeedReviewItem'
 
 export default function PublicProfile() {
   const { username } = useParams()
   const { user } = useAuth()
   const [profile, setProfile] = useState(undefined) // undefined = loading, null = not found
-  const [reviews, setReviews] = useState([])
+  const [items, setItems] = useState([])
+  const [engagement, setEngagement] = useState({})
   const [friendship, setFriendship] = useState(null)
   const [error, setError] = useState(null)
 
   function refresh() {
     getProfileByUsername(username)
-      .then((p) => {
+      .then(async (p) => {
         setProfile(p)
-        if (p) {
-          listUserReviews(p.id).then(setReviews).catch(() => {})
-          if (user && user.id !== p.id) {
-            getFriendship(user.id, p.id).then(setFriendship).catch(() => {})
-          }
+        if (!p) return
+
+        const [posts, reviews] = await Promise.all([listFeed([p.id]), listUserReviews(p.id)])
+        const merged = [...posts, ...reviews].sort(
+          (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
+        )
+        setItems(merged)
+        if (user) setEngagement(await getEngagement(posts.map((post) => post.id), user.id))
+
+        if (user && user.id !== p.id) {
+          getFriendship(user.id, p.id).then(setFriendship).catch(() => {})
         }
       })
       .catch((err) => setError(err.message))
@@ -102,18 +111,21 @@ export default function PublicProfile() {
         </div>
       )}
 
-      <h3>Reviews</h3>
-      {reviews.length === 0 && <p>Nenhuma review ainda.</p>}
-      <div className="track-list">
-        {reviews.map((r) => (
-          <TrackRow
-            key={r.id}
-            track={r.track}
-            linkTo={`/track/${r.trackId}`}
-            meta={`${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}${r.body ? ` — ${r.body}` : ''}`}
+      <h3>Atividade</h3>
+      {items.length === 0 && <p>Nada por aqui ainda.</p>}
+      {items.map((item) =>
+        item.type === 'review' ? (
+          <FeedReviewItem key={`review-${item.id}`} review={item} />
+        ) : (
+          <FeedPost
+            key={`post-${item.id}`}
+            post={item}
+            userId={user?.id}
+            engagement={engagement[item.id]}
+            onChanged={refresh}
           />
-        ))}
-      </div>
+        )
+      )}
     </div>
   )
 }

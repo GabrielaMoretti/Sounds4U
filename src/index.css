@@ -523,6 +523,31 @@ button {
   background: var(--surface);
 }
 
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.mode-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+}
+
+.mode-toggle-btn.active {
+  background: var(--accent);
+  color: #06120a;
+  font-weight: 600;
+}
+
 .notification-row.unread .track-name::before {
   content: '';
   display: inline-block;

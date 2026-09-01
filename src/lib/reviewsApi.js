@@ -59,7 +59,7 @@ export async function listUserReviews(userId) {
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
   if (error) throw error
-  return data.map(fromRow)
+  return withAuthors(data)
 }
 
 // All reviews for a given track, from any user — powers the track detail page.
