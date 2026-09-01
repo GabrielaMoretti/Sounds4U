@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getUserTasteEntries, buildTasteGraph, computeCompatibility } from '../lib/tasteGraphApi'
 import { listListenersForTrack } from '../lib/listeningHistoryApi'
 import { listFriendships } from '../lib/friendsApi'
-import { getGenresForArtists, genreColor, isLastfmConfigured } from '../lib/lastfmApi'
+import { getTagsForArtists, genreColor, isLastfmConfigured } from '../lib/lastfmApi'
 import TasteMapCanvas from '../components/TasteMapCanvas'
 import TrackRow from '../components/TrackRow'
 
@@ -18,6 +18,20 @@ function primaryArtist(track) {
 
 function pairKey(a, b) {
   return [a, b].sort().join('__')
+}
+
+// Picks the heaviest node in each group as a "hub" and connects everyone else to it — sub-
+// clusters without an O(n²) explosion of lines when lots of tracks share the same value.
+function hubEdges(groups, kind) {
+  const edges = []
+  for (const group of groups.values()) {
+    if (group.length < 2) continue
+    const hub = group.reduce((max, n) => (n.weight > max.weight ? n : max), group[0])
+    for (const n of group) {
+      if (n.id !== hub.id) edges.push({ source: hub.id, target: n.id, kind })
+    }
+  }
+  return edges
 }
 
 // Collapses two people's entries into one lookup, merging stats for tracks both interacted with.
@@ -46,7 +60,7 @@ export default function TasteMap() {
   const [friends, setFriends] = useState([])
   const [compareFriendId, setCompareFriendId] = useState('')
   const [friendEntries, setFriendEntries] = useState([])
-  const [genreByArtist, setGenreByArtist] = useState(new Map())
+  const [tagsByArtist, setTagsByArtist] = useState(new Map())
   const [selectedIds, setSelectedIds] = useState([])
   const [listeners, setListeners] = useState(null)
   const [error, setError] = useState(null)
@@ -87,58 +101,67 @@ export default function TasteMap() {
   const graph = useMemo(() => (combinedEntries ? buildTasteGraph(combinedEntries) : null), [combinedEntries])
   const entryById = useMemo(() => mergeEntriesById(combinedEntries ?? []), [combinedEntries])
 
+  // Genre/tag data bridges both maps in compare mode too — connections aren't gated by owner.
   useEffect(() => {
-    if (!graph || !isLastfmConfigured || comparing) return
-    getGenresForArtists(graph.nodes.map((n) => primaryArtist(n.track))).then(setGenreByArtist)
-  }, [graph, comparing])
+    if (!graph || !isLastfmConfigured) return
+    getTagsForArtists(graph.nodes.map((n) => primaryArtist(n.track))).then(setTagsByArtist)
+  }, [graph])
 
-  const coloredNodes = useMemo(() => {
+  const taggedNodes = useMemo(() => {
     if (!graph) return []
-    if (!isLastfmConfigured || comparing) return graph.nodes
     return graph.nodes.map((n) => {
-      const genre = genreByArtist.get(primaryArtist(n.track)) ?? null
-      return { ...n, genre, color: genreColor(genre) }
+      const tags = isLastfmConfigured ? tagsByArtist.get(primaryArtist(n.track)) ?? [] : []
+      const genre = tags[0] ?? null
+      return { ...n, genre, tags, color: comparing ? undefined : genreColor(genre) }
     })
-  }, [graph, genreByArtist, comparing])
+  }, [graph, tagsByArtist, comparing])
 
-  const nodeById = useMemo(() => new Map(coloredNodes.map((n) => [n.id, n])), [coloredNodes])
+  const nodeById = useMemo(() => new Map(taggedNodes.map((n) => [n.id, n])), [taggedNodes])
 
-  // One "hub" per genre, everyone else in that genre connects to it — sub-clusters without
-  // an O(n²) explosion of lines when lots of tracks share a genre.
-  const genreEdges = useMemo(() => {
-    if (!isLastfmConfigured || comparing) return []
-    const byGenre = new Map()
-    for (const n of coloredNodes) {
-      if (!n.genre) continue
-      if (!byGenre.has(n.genre)) byGenre.set(n.genre, [])
-      byGenre.get(n.genre).push(n)
-    }
-    const edges = []
-    for (const group of byGenre.values()) {
-      if (group.length < 2) continue
-      const hub = group.reduce((max, n) => (n.weight > max.weight ? n : max), group[0])
-      for (const n of group) {
-        if (n.id !== hub.id) edges.push({ source: hub.id, target: n.id, kind: 'genre' })
+  const tagEdges = useMemo(() => {
+    const byTag = new Map()
+    for (const n of taggedNodes) {
+      for (const tag of n.tags ?? []) {
+        if (!byTag.has(tag)) byTag.set(tag, [])
+        byTag.get(tag).push(n)
       }
     }
-    return edges
-  }, [coloredNodes, comparing])
+    return hubEdges(byTag, 'genre')
+  }, [taggedNodes])
+
+  const decadeEdges = useMemo(() => {
+    const byDecade = new Map()
+    for (const n of taggedNodes) {
+      const year = n.track.releaseYear
+      if (!year) continue
+      const decade = Math.floor(year / 10) * 10
+      if (!byDecade.has(decade)) byDecade.set(decade, [])
+      byDecade.get(decade).push(n)
+    }
+    return hubEdges(byDecade, 'decade')
+  }, [taggedNodes])
 
   const allEdges = useMemo(() => {
     if (!graph) return []
     const seen = new Set(graph.edges.map((e) => pairKey(e.source, e.target)))
-    const extra = genreEdges.filter((e) => !seen.has(pairKey(e.source, e.target)))
+    const extra = []
+    for (const e of [...tagEdges, ...decadeEdges]) {
+      const key = pairKey(e.source, e.target)
+      if (seen.has(key)) continue
+      seen.add(key)
+      extra.push(e)
+    }
     return [...graph.edges, ...extra]
-  }, [graph, genreEdges])
+  }, [graph, tagEdges, decadeEdges])
 
   const genreLegend = useMemo(() => {
     if (comparing) return []
     const seen = new Map()
-    for (const n of coloredNodes) {
+    for (const n of taggedNodes) {
       if (n.genre && !seen.has(n.genre)) seen.set(n.genre, n.color)
     }
     return [...seen.entries()]
-  }, [coloredNodes, comparing])
+  }, [taggedNodes, comparing])
 
   useEffect(() => {
     if (selectedIds.length !== 1 || !user) {
@@ -164,14 +187,20 @@ export default function TasteMap() {
   let connectionKind = null
   let sharedArtists = []
   let sharedAlbum = null
-  let sharedGenre = null
+  let sharedTags = []
+  let sharedDecade = null
   if (pair && pair[0] && pair[1]) {
     const [a, b] = pair
     const artistsA = a.track.artist.split(', ')
     const artistsB = b.track.artist.split(', ')
     sharedArtists = artistsA.filter((name) => artistsB.includes(name))
     sharedAlbum = a.track.album && a.track.album === b.track.album ? a.track.album : null
-    sharedGenre = a.genre && a.genre === b.genre ? a.genre : null
+    sharedTags = (a.tags ?? []).filter((t) => (b.tags ?? []).includes(t))
+    if (a.track.releaseYear && b.track.releaseYear) {
+      const da = Math.floor(a.track.releaseYear / 10) * 10
+      const db = Math.floor(b.track.releaseYear / 10) * 10
+      if (da === db) sharedDecade = da
+    }
     connectionKind = allEdges.find((e) => pairKey(e.source, e.target) === pairKey(a.id, b.id))?.kind
   }
 
@@ -180,8 +209,9 @@ export default function TasteMap() {
       <h2>Mapa Musical</h2>
       <p className="dsp-note">
         Cada bolinha é uma música que você já ouviu, avaliou ou postou. As linhas conectam por
-        artista, álbum{isLastfmConfigured && !comparing && ' ou gênero'} em comum — quanto maior a
-        bolinha, mais interação. Clique em duas músicas pra ver o que conecta elas.
+        artista, álbum, gênero{isLastfmConfigured && ' (Last.fm)'} ou década de lançamento em
+        comum — quanto maior a bolinha, mais interação. Clique em duas músicas pra ver o que
+        conecta elas.
       </p>
       {error && <div className="notice">{error}</div>}
 
@@ -227,7 +257,7 @@ export default function TasteMap() {
         <>
           <div className="taste-map-wrap">
             <TasteMapCanvas
-              nodes={coloredNodes}
+              nodes={taggedNodes}
               edges={allEdges}
               selectedIds={selectedIds}
               onNodeClick={handleSelect}
@@ -277,12 +307,13 @@ export default function TasteMap() {
           <ul className="connection-list">
             {sharedArtists.length > 0 && <li>Mesmo artista: {sharedArtists.join(', ')}</li>}
             {sharedAlbum && <li>Mesmo álbum: {sharedAlbum}</li>}
-            {sharedGenre && <li>Mesmo gênero: {sharedGenre}</li>}
-            {!sharedArtists.length && !sharedAlbum && !sharedGenre && (
+            {sharedTags.length > 0 && <li>Gênero em comum: {sharedTags.join(', ')}</li>}
+            {sharedDecade && <li>Mesma década: anos {sharedDecade}</li>}
+            {!sharedArtists.length && !sharedAlbum && !sharedTags.length && !sharedDecade && (
               <li>Nenhuma conexão direta — músicas independentes no seu mapa.</li>
             )}
           </ul>
-          {!connectionKind && (sharedArtists.length > 0 || sharedAlbum || sharedGenre) && (
+          {!connectionKind && (sharedArtists.length > 0 || sharedAlbum || sharedTags.length > 0 || sharedDecade) && (
             <p className="dsp-note">(conexão indireta — não aparece como linha no mapa)</p>
           )}
         </div>

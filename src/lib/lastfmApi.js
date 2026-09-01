@@ -4,15 +4,14 @@
 
 const API_KEY = import.meta.env.VITE_LASTFM_API_KEY
 const BASE = 'https://ws.audioscrobbler.com/2.0/'
+const TAGS_PER_ARTIST = 3
 
 export const isLastfmConfigured = Boolean(API_KEY)
 
-const cache = new Map()
+const cache = new Map() // artistName -> string[] tag names, sorted by Last.fm's own count desc
 
-// Top Last.fm tag for an artist — used as a stand-in for "genre". Cached in memory per session
-// since the same artist shows up across many tracks.
-export async function getArtistGenre(artistName) {
-  if (!API_KEY || !artistName) return null
+async function fetchTags(artistName) {
+  if (!API_KEY || !artistName) return []
   if (cache.has(artistName)) return cache.get(artistName)
 
   const params = new URLSearchParams({
@@ -22,24 +21,30 @@ export async function getArtistGenre(artistName) {
     format: 'json',
   })
 
-  let genre = null
+  let tags = []
   try {
     const res = await fetch(`${BASE}?${params}`)
     if (res.ok) {
       const data = await res.json()
-      const tags = data?.toptags?.tag ?? []
-      genre = tags.length > 0 ? tags[0].name : null
+      tags = (data?.toptags?.tag ?? []).slice(0, TAGS_PER_ARTIST).map((t) => t.name)
     }
   } catch {
-    genre = null
+    tags = []
   }
-  cache.set(artistName, genre)
-  return genre
+  cache.set(artistName, tags)
+  return tags
 }
 
-// Fetches genres for a list of artist names with limited concurrency, to stay well under
-// Last.fm's rate limit even when a map has a hundred distinct artists.
-export async function getGenresForArtists(artistNames, concurrency = 4) {
+// The single dominant tag — used for node color/label.
+export async function getArtistGenre(artistName) {
+  const tags = await fetchTags(artistName)
+  return tags[0] ?? null
+}
+
+// Fetches top tags (plural) for a list of artist names with limited concurrency, to stay well
+// under Last.fm's rate limit even when a map has a hundred distinct artists. Returns
+// Map<artistName, string[]> — the full tag list is used for connections, tags[0] for color.
+export async function getTagsForArtists(artistNames, concurrency = 4) {
   const uniqueNames = [...new Set(artistNames)]
   const result = new Map()
   let cursor = 0
@@ -47,7 +52,7 @@ export async function getGenresForArtists(artistNames, concurrency = 4) {
   async function worker() {
     while (cursor < uniqueNames.length) {
       const name = uniqueNames[cursor++]
-      result.set(name, await getArtistGenre(name))
+      result.set(name, await fetchTags(name))
     }
   }
 

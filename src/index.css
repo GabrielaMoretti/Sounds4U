@@ -608,6 +608,12 @@ button {
   stroke-dasharray: 3 3;
 }
 
+.taste-edge-decade {
+  stroke: #38bdf8;
+  stroke-opacity: 0.18;
+  stroke-dasharray: 1 4;
+}
+
 .taste-node-selected {
   stroke: #fff;
   stroke-width: 3;

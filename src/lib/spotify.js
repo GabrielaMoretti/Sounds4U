@@ -100,6 +100,7 @@ export async function getTrackById(userId, trackId) {
 }
 
 export function normalizeTrack(track) {
+  const releaseDate = track.album?.release_date
   return {
     id: track.id,
     name: track.name,
@@ -108,5 +109,6 @@ export function normalizeTrack(track) {
     albumArtUrl: track.album?.images?.[0]?.url ?? null,
     durationMs: track.duration_ms,
     externalUrl: track.external_urls?.spotify ?? null,
+    releaseYear: releaseDate ? parseInt(releaseDate.slice(0, 4), 10) : null,
   }
 }

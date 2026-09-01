@@ -9,6 +9,7 @@ function trackFromRow(row) {
     albumArtUrl: row.album_art_url,
     durationMs: row.duration_ms,
     externalUrl: row.external_url,
+    releaseYear: row.release_year ?? null,
   }
 }
 

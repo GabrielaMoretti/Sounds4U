@@ -12,6 +12,7 @@ export async function cacheTrack(track) {
       album_art_url: track.albumArtUrl,
       duration_ms: track.durationMs,
       external_url: track.externalUrl,
+      release_year: track.releaseYear ?? null,
     },
     { onConflict: 'id' }
   )
@@ -27,6 +28,7 @@ function fromRow(row) {
     albumArtUrl: row.album_art_url,
     durationMs: row.duration_ms,
     externalUrl: row.external_url,
+    releaseYear: row.release_year ?? null,
   }
 }
 
