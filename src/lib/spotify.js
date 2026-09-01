@@ -13,10 +13,37 @@ export class SpotifyReauthRequired extends Error {
   }
 }
 
+async function refreshAccessToken(userId, refreshToken) {
+  let res
+  try {
+    res = await fetch('/api/spotify-refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+  } catch {
+    // /api not served (e.g. local `vite dev` without `vercel dev`) — fall back to reconnect.
+    throw new SpotifyReauthRequired()
+  }
+  if (!res.ok) throw new SpotifyReauthRequired()
+
+  const data = await res.json()
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString()
+
+  const { error } = await supabase
+    .from('dsp_connections')
+    .update({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: expiresAt })
+    .eq('user_id', userId)
+    .eq('provider', 'spotify')
+  if (error) throw error
+
+  return data.access_token
+}
+
 async function getValidAccessToken(userId) {
   const { data, error } = await supabase
     .from('dsp_connections')
-    .select('access_token, expires_at')
+    .select('access_token, refresh_token, expires_at')
     .eq('user_id', userId)
     .eq('provider', 'spotify')
     .maybeSingle()
@@ -25,9 +52,10 @@ async function getValidAccessToken(userId) {
   if (!data) throw new SpotifyReauthRequired()
 
   const isExpired = Date.now() > new Date(data.expires_at).getTime() - 30_000
-  if (isExpired) throw new SpotifyReauthRequired()
+  if (!isExpired) return data.access_token
 
-  return data.access_token
+  if (!data.refresh_token) throw new SpotifyReauthRequired()
+  return refreshAccessToken(userId, data.refresh_token)
 }
 
 async function spotifyFetch(userId, path, params = {}) {
