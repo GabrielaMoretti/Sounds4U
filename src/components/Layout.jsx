@@ -6,6 +6,7 @@ const navItems = [
   { to: '/feed', label: 'Feed' },
   { to: '/history', label: 'Histórico' },
   { to: '/reviews', label: 'Reviews' },
+  { to: '/map', label: 'Mapa' },
   { to: '/search', label: 'Buscar' },
   { to: '/friends', label: 'Amigos' },
   { to: '/messages', label: 'Mensagens' },

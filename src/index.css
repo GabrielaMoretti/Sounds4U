@@ -89,6 +89,10 @@ button {
   margin: 0 auto;
 }
 
+.content:has(.taste-map-page) {
+  max-width: 960px;
+}
+
 .page h2 {
   margin-top: 0;
 }
@@ -546,6 +550,60 @@ button {
   background: var(--accent);
   color: #06120a;
   font-weight: 600;
+}
+
+.taste-map-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.taste-map-svg {
+  width: 100%;
+  height: 600px;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.taste-map-svg:active {
+  cursor: grabbing;
+}
+
+.taste-node {
+  cursor: pointer;
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.taste-node:hover {
+  stroke: var(--text);
+}
+
+.taste-node-label {
+  fill: var(--text-dim);
+  font-size: 10px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.taste-edge {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.taste-edge-album {
+  stroke: var(--accent);
+  stroke-opacity: 0.5;
+}
+
+.taste-edge-artist {
+  stroke-opacity: 0.35;
+}
+
+.taste-map-selected {
+  margin-top: 16px;
 }
 
 .notification-row.unread .track-name::before {

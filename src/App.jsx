@@ -14,6 +14,7 @@ import Search from './pages/Search'
 import TrackDetail from './pages/TrackDetail'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Notifications from './pages/Notifications'
+import TasteMap from './pages/TasteMap'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/post/:postId" element={<PostDetail />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/map" element={<TasteMap />} />
       </Route>
     </Routes>
   )
