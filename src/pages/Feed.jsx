@@ -9,8 +9,16 @@ import FeedPost from '../components/FeedPost'
 import FeedReviewItem from '../components/FeedReviewItem'
 import Stars from '../components/Stars'
 
+function mergeSorted(posts, reviews) {
+  return [...posts, ...reviews].sort(
+    (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
+  )
+}
+
 export default function Feed() {
   const { connected, user } = useAuth()
+  const [scope, setScope] = useState('friends') // 'friends' | 'discover'
+  const [autoSwitched, setAutoSwitched] = useState(false)
   const [mode, setMode] = useState('post') // 'post' | 'review'
   const [track, setTrack] = useState(null)
   const [body, setBody] = useState('')
@@ -24,14 +32,17 @@ export default function Feed() {
   async function refresh() {
     if (!user) return
     try {
-      const friendIds = await listAcceptedFriendIds(user.id)
-      const ids = [user.id, ...friendIds]
+      const ids = scope === 'friends' ? [user.id, ...(await listAcceptedFriendIds(user.id))] : null
       const [feedPosts, feedReviews] = await Promise.all([listFeed(ids), listReviewsForUsers(ids)])
-      const merged = [...feedPosts, ...feedReviews].sort(
-        (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
-      )
-      setItems(merged)
+      setItems(mergeSorted(feedPosts, feedReviews))
       setEngagement(await getEngagement(feedPosts.map((p) => p.id), user.id))
+
+      // First time we see an empty friends feed, nudge to Descobrir so new users aren't
+      // staring at a blank page.
+      if (scope === 'friends' && feedPosts.length === 0 && feedReviews.length === 0 && !autoSwitched) {
+        setAutoSwitched(true)
+        setScope('discover')
+      }
     } catch (err) {
       setError(err.message)
     }
@@ -39,7 +50,7 @@ export default function Feed() {
 
   useEffect(() => {
     refresh()
-  }, [user])
+  }, [user, scope])
 
   function resetComposer() {
     setTrack(null)
@@ -120,8 +131,28 @@ export default function Feed() {
         )}
       </section>
 
+      <div className="mode-toggle">
+        <button
+          type="button"
+          className={`mode-toggle-btn${scope === 'friends' ? ' active' : ''}`}
+          onClick={() => setScope('friends')}
+        >
+          Amigos
+        </button>
+        <button
+          type="button"
+          className={`mode-toggle-btn${scope === 'discover' ? ' active' : ''}`}
+          onClick={() => setScope('discover')}
+        >
+          Descobrir
+        </button>
+      </div>
+
       <section>
-        {items.length === 0 && <p>Nada por aqui ainda — adicione amigos ou seja o primeiro a postar.</p>}
+        {items.length === 0 && scope === 'friends' && (
+          <p>Nada dos seus amigos ainda — adicione alguém ou dá uma olhada em Descobrir.</p>
+        )}
+        {items.length === 0 && scope === 'discover' && <p>Ninguém postou nada ainda.</p>}
         {items.map((item) =>
           item.type === 'review' ? (
             <FeedReviewItem key={`review-${item.id}`} review={item} />

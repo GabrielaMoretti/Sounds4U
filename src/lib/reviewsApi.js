@@ -74,14 +74,12 @@ export async function listReviewsForTrack(trackId) {
 }
 
 // Reviews by the given users (self + accepted friends) — merged into the feed.
+// Pass null/undefined for the public "discover" feed (everyone, not just friends).
 export async function listReviewsForUsers(userIds) {
-  if (userIds.length === 0) return []
-  const { data, error } = await supabase
-    .from('reviews')
-    .select('*, tracks(*)')
-    .in('user_id', userIds)
-    .order('updated_at', { ascending: false })
-    .limit(50)
+  if (userIds && userIds.length === 0) return []
+  let query = supabase.from('reviews').select('*, tracks(*)').order('updated_at', { ascending: false }).limit(50)
+  if (userIds) query = query.in('user_id', userIds)
+  const { data, error } = await query
   if (error) throw error
   return withAuthors(data)
 }

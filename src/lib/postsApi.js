@@ -50,15 +50,13 @@ export async function getPost(postId) {
 }
 
 // userIds should include the viewer's own id plus their accepted friends' ids.
+// Pass null/undefined for the public "discover" feed (everyone, not just friends).
 export async function listFeed(userIds) {
-  if (userIds.length === 0) return []
+  if (userIds && userIds.length === 0) return []
 
-  const { data: rows, error } = await supabase
-    .from('posts')
-    .select('*, tracks(*)')
-    .in('user_id', userIds)
-    .order('created_at', { ascending: false })
-    .limit(50)
+  let query = supabase.from('posts').select('*, tracks(*)').order('created_at', { ascending: false }).limit(50)
+  if (userIds) query = query.in('user_id', userIds)
+  const { data: rows, error } = await query
   if (error) throw error
   if (rows.length === 0) return []
 
