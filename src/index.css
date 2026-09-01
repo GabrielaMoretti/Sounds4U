@@ -644,6 +644,19 @@ button {
   background: var(--surface);
 }
 
+.recommend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .recommend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .compat-percent {
   font-size: 2.2rem;
   font-weight: 700;

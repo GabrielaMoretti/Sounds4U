@@ -105,17 +105,58 @@ function jaccard(a, b) {
   return union === 0 ? 0 : intersection / union
 }
 
-// "Musical Tinder" score: how much two people's listening overlaps, by exact track and by
-// artist. Weighted toward artist overlap since matching the exact same track is rarer.
-export function computeCompatibility(myEntries, friendEntries) {
+function primaryArtistOf(track) {
+  return track.artist.split(', ')[0]
+}
+
+// A "genre fingerprint" for a person: how many of their tracks fall under each tag, across
+// their whole listening — this is the "ecosystem" signal, not just exact matches.
+function buildGenreProfile(entries, tagsByArtist) {
+  const freq = new Map()
+  if (!tagsByArtist) return freq
+  for (const e of entries) {
+    for (const tag of tagsByArtist.get(primaryArtistOf(e.track)) ?? []) {
+      freq.set(tag, (freq.get(tag) ?? 0) + 1)
+    }
+  }
+  return freq
+}
+
+function cosineSimilarity(freqA, freqB) {
+  if (freqA.size === 0 || freqB.size === 0) return 0
+  let dot = 0
+  let normA = 0
+  let normB = 0
+  const keys = new Set([...freqA.keys(), ...freqB.keys()])
+  for (const k of keys) {
+    const a = freqA.get(k) ?? 0
+    const b = freqB.get(k) ?? 0
+    dot += a * b
+    normA += a * a
+    normB += b * b
+  }
+  return normA === 0 || normB === 0 ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+// "Musical Tinder" score. Genre ecosystem carries the most weight on purpose — two people who
+// live in the same musical world but never picked the exact same song should still score high.
+// Track/artist overlap add on top as a bonus for literal matches. `tagsByArtist` is optional
+// (Map<artistName, string[]>, from lastfmApi) — without it the score falls back to overlap only.
+export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
   const myTracks = new Set(myEntries.map((e) => e.track.id))
   const friendTracks = new Set(friendEntries.map((e) => e.track.id))
-  const myArtists = new Set(myEntries.map((e) => e.track.artist.split(', ')[0]))
-  const friendArtists = new Set(friendEntries.map((e) => e.track.artist.split(', ')[0]))
+  const myArtists = new Set(myEntries.map((e) => primaryArtistOf(e.track)))
+  const friendArtists = new Set(friendEntries.map((e) => primaryArtistOf(e.track)))
 
   const trackScore = jaccard(myTracks, friendTracks)
   const artistScore = jaccard(myArtists, friendArtists)
-  const percent = Math.round((trackScore * 0.4 + artistScore * 0.6) * 100)
+  const genreScore = tagsByArtist
+    ? cosineSimilarity(buildGenreProfile(myEntries, tagsByArtist), buildGenreProfile(friendEntries, tagsByArtist))
+    : 0
+
+  const percent = tagsByArtist
+    ? Math.round((genreScore * 0.5 + artistScore * 0.3 + trackScore * 0.2) * 100)
+    : Math.round((artistScore * 0.6 + trackScore * 0.4) * 100)
 
   let sharedTracks = 0
   for (const id of myTracks) if (friendTracks.has(id)) sharedTracks += 1
@@ -123,4 +164,28 @@ export function computeCompatibility(myEntries, friendEntries) {
   for (const name of myArtists) if (friendArtists.has(name)) sharedArtists += 1
 
   return { percent, sharedTracks, sharedArtists }
+}
+
+// Ranks the other person's tracks (excluding ones you already have) by how well they fit your
+// existing genre taste, plus how much they were into it (rating/plays/posted) — "músicas do seu
+// amigo que você provavelmente vai curtir". Works without Last.fm too, just falls back to
+// ranking purely by the other person's own enthusiasm.
+export function crossRecommend(baseEntries, candidateEntries, tagsByArtist, limit = 8) {
+  const baseTrackIds = new Set(baseEntries.map((e) => e.track.id))
+  const baseProfile = buildGenreProfile(baseEntries, tagsByArtist)
+
+  function score(entry) {
+    const tags = tagsByArtist?.get(primaryArtistOf(entry.track)) ?? []
+    let genreAffinity = 0
+    for (const tag of tags) genreAffinity += baseProfile.get(tag) ?? 0
+    const enthusiasm = (entry.rating ?? 0) * 2 + entry.playCount + (entry.posted ? 2 : 0)
+    return genreAffinity * 3 + enthusiasm
+  }
+
+  return candidateEntries
+    .filter((e) => !baseTrackIds.has(e.track.id))
+    .map((e) => ({ entry: e, score: score(e) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.entry)
 }

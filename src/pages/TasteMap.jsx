@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getUserTasteEntries, buildTasteGraph, computeCompatibility } from '../lib/tasteGraphApi'
+import { getUserTasteEntries, buildTasteGraph, computeCompatibility, crossRecommend } from '../lib/tasteGraphApi'
 import { listListenersForTrack } from '../lib/listeningHistoryApi'
 import { listFriendships } from '../lib/friendsApi'
 import { getTagsForArtists, genreColor, isLastfmConfigured } from '../lib/lastfmApi'
@@ -95,17 +95,28 @@ export default function TasteMap() {
 
   const compatibility = useMemo(() => {
     if (!comparing || !entries || friendEntries.length === 0) return null
-    return computeCompatibility(entries, friendEntries)
-  }, [comparing, entries, friendEntries])
+    return computeCompatibility(entries, friendEntries, isLastfmConfigured ? tagsByArtist : undefined)
+  }, [comparing, entries, friendEntries, tagsByArtist])
+
+  const recommendedFromFriend = useMemo(() => {
+    if (!comparing || !entries || friendEntries.length === 0) return []
+    return crossRecommend(entries, friendEntries, tagsByArtist, 6)
+  }, [comparing, entries, friendEntries, tagsByArtist])
+
+  const recommendedForFriend = useMemo(() => {
+    if (!comparing || !entries || friendEntries.length === 0) return []
+    return crossRecommend(friendEntries, entries, tagsByArtist, 6)
+  }, [comparing, entries, friendEntries, tagsByArtist])
 
   const graph = useMemo(() => (combinedEntries ? buildTasteGraph(combinedEntries) : null), [combinedEntries])
   const entryById = useMemo(() => mergeEntriesById(combinedEntries ?? []), [combinedEntries])
 
-  // Genre/tag data bridges both maps in compare mode too — connections aren't gated by owner.
+  // Fetch tags for every artist across both people's full listening (not just the graph's
+  // capped node list) so the compatibility score and recommendations aren't skewed by the cap.
   useEffect(() => {
-    if (!graph || !isLastfmConfigured) return
-    getTagsForArtists(graph.nodes.map((n) => primaryArtist(n.track))).then(setTagsByArtist)
-  }, [graph])
+    if (!combinedEntries || !isLastfmConfigured) return
+    getTagsForArtists(combinedEntries.map((e) => primaryArtist(e.track))).then(setTagsByArtist)
+  }, [combinedEntries])
 
   const taggedNodes = useMemo(() => {
     if (!graph) return []
@@ -246,6 +257,33 @@ export default function TasteMap() {
         </div>
       )}
       {comparing && !compatibility && <p>Calculando compatibilidade…</p>}
+
+      {comparing && (recommendedFromFriend.length > 0 || recommendedForFriend.length > 0) && (
+        <div className="recommend-grid">
+          {recommendedFromFriend.length > 0 && (
+            <div>
+              <h3>
+                De {friendProfile?.display_name || friendProfile?.username}, você pode curtir
+              </h3>
+              <div className="track-list">
+                {recommendedFromFriend.map((e) => (
+                  <TrackRow key={e.track.id} track={e.track} linkTo={`/track/${e.track.id}`} />
+                ))}
+              </div>
+            </div>
+          )}
+          {recommendedForFriend.length > 0 && (
+            <div>
+              <h3>{friendProfile?.display_name || friendProfile?.username} pode curtir de você</h3>
+              <div className="track-list">
+                {recommendedForFriend.map((e) => (
+                  <TrackRow key={e.track.id} track={e.track} linkTo={`/track/${e.track.id}`} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {!graph && <p>Carregando…</p>}
       {graph && graph.nodes.length === 0 && (
