@@ -5,8 +5,10 @@ import { getProfileByUsername } from '../lib/profilesApi'
 import { listUserReviews } from '../lib/reviewsApi'
 import { listFeed, getEngagement } from '../lib/postsApi'
 import { getFriendship, sendFriendRequest, acceptFriendRequest } from '../lib/friendsApi'
+import { listCommonTracks } from '../lib/listeningHistoryApi'
 import FeedPost from '../components/FeedPost'
 import FeedReviewItem from '../components/FeedReviewItem'
+import TrackRow from '../components/TrackRow'
 
 export default function PublicProfile() {
   const { username } = useParams()
@@ -15,6 +17,7 @@ export default function PublicProfile() {
   const [items, setItems] = useState([])
   const [engagement, setEngagement] = useState({})
   const [friendship, setFriendship] = useState(null)
+  const [commonTracks, setCommonTracks] = useState([])
   const [error, setError] = useState(null)
 
   function refresh() {
@@ -31,7 +34,11 @@ export default function PublicProfile() {
         if (user) setEngagement(await getEngagement(posts.map((post) => post.id), user.id))
 
         if (user && user.id !== p.id) {
-          getFriendship(user.id, p.id).then(setFriendship).catch(() => {})
+          const f = await getFriendship(user.id, p.id).catch(() => null)
+          setFriendship(f)
+          if (f?.status === 'accepted') {
+            listCommonTracks(user.id, p.id).then(setCommonTracks).catch(() => {})
+          }
         }
       })
       .catch((err) => setError(err.message))
@@ -109,6 +116,17 @@ export default function PublicProfile() {
             </Link>
           )}
         </div>
+      )}
+
+      {friendship?.status === 'accepted' && commonTracks.length > 0 && (
+        <>
+          <h3>Músicas em comum ({commonTracks.length})</h3>
+          <div className="track-list">
+            {commonTracks.map((t) => (
+              <TrackRow key={t.id} track={t} linkTo={`/track/${t.id}`} />
+            ))}
+          </div>
+        </>
       )}
 
       <h3>Atividade</h3>

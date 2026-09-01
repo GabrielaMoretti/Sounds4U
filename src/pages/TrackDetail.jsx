@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getTrack, cacheTrack } from '../lib/tracksApi'
 import { getTrackById, SpotifyReauthRequired } from '../lib/spotify'
 import { listReviewsForTrack } from '../lib/reviewsApi'
+import { listListenersForTrack } from '../lib/listeningHistoryApi'
 import TrackRow from '../components/TrackRow'
 
 export default function TrackDetail() {
@@ -11,6 +12,7 @@ export default function TrackDetail() {
   const { user } = useAuth()
   const [track, setTrack] = useState(undefined) // undefined = loading, null = not found
   const [reviews, setReviews] = useState([])
+  const [listeners, setListeners] = useState([])
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -27,6 +29,11 @@ export default function TrackDetail() {
 
         const r = await listReviewsForTrack(trackId)
         if (!cancelled) setReviews(r)
+
+        if (user) {
+          const l = await listListenersForTrack(trackId, user.id)
+          if (!cancelled) setListeners(l)
+        }
       } catch (err) {
         if (cancelled) return
         if (err instanceof SpotifyReauthRequired) setError('Sessão do Spotify expirou — reconecte na aba Histórico.')
@@ -53,6 +60,18 @@ export default function TrackDetail() {
       {avg && (
         <p className="dsp-note">
           Média: {avg} ★ ({reviews.length} review{reviews.length > 1 ? 's' : ''})
+        </p>
+      )}
+
+      {listeners.length > 0 && (
+        <p className="dsp-note">
+          Amigos que ouviram:{' '}
+          {listeners.map((p, i) => (
+            <span key={p.id}>
+              {i > 0 && ', '}
+              <Link to={`/u/${p.username}`}>{p.display_name || p.username}</Link>
+            </span>
+          ))}
         </p>
       )}
 
