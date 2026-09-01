@@ -604,6 +604,28 @@ button {
 
 .taste-map-selected {
   margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.taste-detail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 12px 0;
+}
+
+.taste-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.taste-review-quote {
+  font-style: italic;
+  color: var(--text-dim);
+  margin: 8px 0;
 }
 
 .notification-row.unread .track-name::before {

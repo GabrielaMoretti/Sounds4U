@@ -16,8 +16,8 @@ function trackFromRow(row) {
 export async function getUserTasteEntries(userId) {
   const [{ data: plays, error: playsError }, { data: reviews, error: reviewsError }, { data: posts, error: postsError }] =
     await Promise.all([
-      supabase.from('listening_history').select('track_id, tracks(*)').eq('user_id', userId),
-      supabase.from('reviews').select('track_id, rating, tracks(*)').eq('user_id', userId),
+      supabase.from('listening_history').select('track_id, played_at, tracks(*)').eq('user_id', userId),
+      supabase.from('reviews').select('track_id, rating, body, tracks(*)').eq('user_id', userId),
       supabase.from('posts').select('track_id, tracks(*)').eq('user_id', userId),
     ])
   if (playsError) throw playsError
@@ -27,12 +27,27 @@ export async function getUserTasteEntries(userId) {
   const byId = new Map()
   function ensure(row) {
     if (!byId.has(row.track_id)) {
-      byId.set(row.track_id, { track: trackFromRow(row.tracks), playCount: 0, rating: null, posted: false })
+      byId.set(row.track_id, {
+        track: trackFromRow(row.tracks),
+        playCount: 0,
+        lastPlayedAt: null,
+        rating: null,
+        reviewBody: null,
+        posted: false,
+      })
     }
     return byId.get(row.track_id)
   }
-  for (const p of plays) ensure(p).playCount += 1
-  for (const r of reviews) ensure(r).rating = r.rating
+  for (const p of plays) {
+    const e = ensure(p)
+    e.playCount += 1
+    if (!e.lastPlayedAt || p.played_at > e.lastPlayedAt) e.lastPlayedAt = p.played_at
+  }
+  for (const r of reviews) {
+    const e = ensure(r)
+    e.rating = r.rating
+    e.reviewBody = r.body
+  }
   for (const p of posts) ensure(p).posted = true
 
   return [...byId.values()]
