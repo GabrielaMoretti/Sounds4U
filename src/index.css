@@ -613,6 +613,38 @@ button {
   stroke-width: 3;
 }
 
+.compare-picker {
+  margin: 12px 0;
+}
+
+.compare-picker select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  margin-left: 6px;
+}
+
+.compat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  background: var(--surface);
+}
+
+.compat-percent {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
 .taste-map-toolbar {
   display: flex;
   align-items: center;

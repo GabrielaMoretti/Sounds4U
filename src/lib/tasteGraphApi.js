@@ -95,3 +95,31 @@ export function buildTasteGraph(entries, { maxNodes = 150 } = {}) {
 
   return { nodes, edges }
 }
+
+function jaccard(a, b) {
+  if (a.size === 0 && b.size === 0) return 0
+  let intersection = 0
+  for (const x of a) if (b.has(x)) intersection += 1
+  const union = a.size + b.size - intersection
+  return union === 0 ? 0 : intersection / union
+}
+
+// "Musical Tinder" score: how much two people's listening overlaps, by exact track and by
+// artist. Weighted toward artist overlap since matching the exact same track is rarer.
+export function computeCompatibility(myEntries, friendEntries) {
+  const myTracks = new Set(myEntries.map((e) => e.track.id))
+  const friendTracks = new Set(friendEntries.map((e) => e.track.id))
+  const myArtists = new Set(myEntries.map((e) => e.track.artist.split(', ')[0]))
+  const friendArtists = new Set(friendEntries.map((e) => e.track.artist.split(', ')[0]))
+
+  const trackScore = jaccard(myTracks, friendTracks)
+  const artistScore = jaccard(myArtists, friendArtists)
+  const percent = Math.round((trackScore * 0.4 + artistScore * 0.6) * 100)
+
+  let sharedTracks = 0
+  for (const id of myTracks) if (friendTracks.has(id)) sharedTracks += 1
+  let sharedArtists = 0
+  for (const name of myArtists) if (friendArtists.has(name)) sharedArtists += 1
+
+  return { percent, sharedTracks, sharedArtists }
+}
