@@ -21,6 +21,8 @@ function describe(n) {
       return `${name} aceitou seu pedido de amizade`
     case 'message':
       return `${name} te mandou uma mensagem`
+    case 'mention':
+      return `${name} te marcou num post`
     default:
       return `${name} interagiu com você`
   }
@@ -30,6 +32,7 @@ function linkFor(n) {
   switch (n.type) {
     case 'like':
     case 'comment':
+    case 'mention':
       return n.postId ? `/post/${n.postId}` : '#'
     case 'friend_request':
       return '/friends'

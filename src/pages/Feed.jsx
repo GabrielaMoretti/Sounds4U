@@ -119,7 +119,11 @@ export default function Feed() {
           <div className="review-form">
             {mode === 'review' && <Stars value={rating} onChange={setRating} />}
             <textarea
-              placeholder={mode === 'review' ? 'O que você achou?' : 'O que você tem a dizer sobre essa música?'}
+              placeholder={
+                mode === 'review'
+                  ? 'O que você achou?'
+                  : 'O que você tem a dizer sobre essa música? (@username marca alguém)'
+              }
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={3}

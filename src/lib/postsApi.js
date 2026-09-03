@@ -13,10 +13,36 @@ function trackFromRow(row) {
   }
 }
 
+const MENTION_PATTERN = /@([a-z0-9_]{3,30})/gi
+
+// Looks up @username tokens in the post body and links the ones that match real accounts —
+// a trigger on post_mentions handles notifying them.
+async function saveMentions(postId, body) {
+  const usernames = [...new Set([...body.matchAll(MENTION_PATTERN)].map((m) => m[1].toLowerCase()))]
+  if (usernames.length === 0) return
+
+  const { data: profiles, error } = await supabase.from('profiles').select('id').in('username', usernames)
+  if (error) throw error
+  if (profiles.length === 0) return
+
+  const { error: insertError } = await supabase
+    .from('post_mentions')
+    .upsert(
+      profiles.map((p) => ({ post_id: postId, user_id: p.id })),
+      { onConflict: 'post_id,user_id' }
+    )
+  if (insertError) throw insertError
+}
+
 export async function createPost({ userId, track, body }) {
   await cacheTrack(track)
-  const { error } = await supabase.from('posts').insert({ user_id: userId, track_id: track.id, body })
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({ user_id: userId, track_id: track.id, body })
+    .select()
+    .single()
   if (error) throw error
+  await saveMentions(data.id, body).catch((err) => console.error('Falha ao salvar menções:', err))
 }
 
 export async function deletePost(postId) {

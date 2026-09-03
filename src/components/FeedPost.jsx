@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import TrackRow from './TrackRow'
+import MentionText from './MentionText'
 import {
   likePost,
   unlikePost,
@@ -82,7 +83,9 @@ export default function FeedPost({ post, userId, engagement, onChanged }) {
         </Link>
         <span className="track-meta">{formatTime(post.createdAt)}</span>
       </div>
-      <p className="feed-post-body">{post.body}</p>
+      <p className="feed-post-body">
+        <MentionText text={post.body} />
+      </p>
       <TrackRow track={post.track} />
 
       <div className="feed-post-actions">
