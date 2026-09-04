@@ -91,7 +91,7 @@ export default function Ospnm() {
 
   return (
     <div className="page">
-      <p className="ospnm-presented-by">Um oferecimento Chope de Vinho Feat Skol Beats</p>
+      <p className="ospnm-presented-by">Um oferecimento Chopp de Vinho Feat Skol Beats</p>
       <h2>OSPNM</h2>
       <p className="ospnm-acronym">O Quanto Nos Passamos Nessa Música</p>
       <p className="dsp-note">
