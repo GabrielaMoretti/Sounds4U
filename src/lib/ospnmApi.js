@@ -85,6 +85,38 @@ export async function listMyOspnm(userId) {
   return data.map(fromRow)
 }
 
+async function withAuthors(rows) {
+  if (rows.length === 0) return []
+  const authorIds = [...new Set(rows.map((r) => r.user_id))]
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .in('id', authorIds)
+  if (error) throw error
+  const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]))
+  return rows.map((row) => ({
+    ...fromRow(row),
+    type: 'ospnm',
+    userId: row.user_id,
+    author: profileById[row.user_id] ?? null,
+  }))
+}
+
+// OSPNM entries by the given users — merged into the feed. Pass null/undefined for the public
+// "discover" feed (everyone, not just friends), same convention as posts/reviews.
+export async function listOspnmForUsers(userIds) {
+  if (userIds && userIds.length === 0) return []
+  let query = supabase
+    .from('ospnm_entries')
+    .select('*, tracks(*)')
+    .order('updated_at', { ascending: false })
+    .limit(50)
+  if (userIds) query = query.in('user_id', userIds)
+  const { data, error } = await query
+  if (error) throw error
+  return withAuthors(data)
+}
+
 export async function upsertOspnm({ userId, track, stars, bottles, justification, crazinessNote }) {
   await cacheTrack(track)
   const { error } = await supabase.from('ospnm_entries').upsert(

@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { getProfileByUsername } from '../lib/profilesApi'
 import { listUserReviews } from '../lib/reviewsApi'
 import { listFeed, getEngagement } from '../lib/postsApi'
+import { listOspnmForUsers } from '../lib/ospnmApi'
 import { getFriendship, sendFriendRequest, acceptFriendRequest } from '../lib/friendsApi'
 import { listCommonTracks } from '../lib/listeningHistoryApi'
 import FeedPost from '../components/FeedPost'
 import FeedReviewItem from '../components/FeedReviewItem'
+import FeedOspnmItem from '../components/FeedOspnmItem'
 import TrackRow from '../components/TrackRow'
 
 export default function PublicProfile() {
@@ -26,8 +28,12 @@ export default function PublicProfile() {
         setProfile(p)
         if (!p) return
 
-        const [posts, reviews] = await Promise.all([listFeed([p.id]), listUserReviews(p.id)])
-        const merged = [...posts, ...reviews].sort(
+        const [posts, reviews, ospnm] = await Promise.all([
+          listFeed([p.id]),
+          listUserReviews(p.id),
+          listOspnmForUsers([p.id]),
+        ])
+        const merged = [...posts, ...reviews, ...ospnm].sort(
           (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
         )
         setItems(merged)
@@ -131,10 +137,10 @@ export default function PublicProfile() {
 
       <h3>Atividade</h3>
       {items.length === 0 && <p>Nada por aqui ainda.</p>}
-      {items.map((item) =>
-        item.type === 'review' ? (
-          <FeedReviewItem key={`review-${item.id}`} review={item} />
-        ) : (
+      {items.map((item) => {
+        if (item.type === 'review') return <FeedReviewItem key={`review-${item.id}`} review={item} />
+        if (item.type === 'ospnm') return <FeedOspnmItem key={`ospnm-${item.id}`} entry={item} />
+        return (
           <FeedPost
             key={`post-${item.id}`}
             post={item}
@@ -143,7 +149,7 @@ export default function PublicProfile() {
             onChanged={refresh}
           />
         )
-      )}
+      })}
     </div>
   )
 }

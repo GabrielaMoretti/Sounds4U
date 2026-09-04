@@ -5,6 +5,7 @@ import { getRoleSuggestions, listMyOspnm, upsertOspnm, deleteOspnm } from '../li
 import { isLastfmConfigured } from '../lib/lastfmApi'
 import { SpotifyReauthRequired } from '../lib/spotify'
 import TrackRow from '../components/TrackRow'
+import TrackPicker from '../components/TrackPicker'
 import Stars from '../components/Stars'
 import Bottles from '../components/Bottles'
 
@@ -44,6 +45,7 @@ export default function Ospnm() {
 
   function pickTrack(track) {
     setSelectedTrack(track)
+    if (!track) return
     const existing = entries.find((e) => e.trackId === track.id)
     setStars(existing?.stars ?? 0)
     setBottles(existing?.bottles ?? 0)
@@ -93,15 +95,15 @@ export default function Ospnm() {
       <h2>OSPNM</h2>
       <p className="ospnm-acronym">O Quanto Nos Passamos Nessa Música</p>
       <p className="dsp-note">
-        Só entra faixa da linha do batidão — funk, eletrofunk e afins — puxadas do seu histórico
-        de escuta recente.
+        Feito pra linha do batidão — funk, eletrofunk e afins — mas escolhe qualquer música que
+        quiser. As sugestões abaixo são só um atalho pro que você andou ouvindo nessa pegada.
       </p>
       {error && <div className="notice">{error}</div>}
 
       {!isLastfmConfigured && (
         <div className="notice">
-          Precisa da Last.fm configurada pra identificar o gênero e filtrar a lista — sem isso não
-          arrisco deixar passar música fora da linha.
+          Sem a Last.fm configurada não dá pra sugerir automaticamente as músicas do batidão do
+          seu histórico — mas você pode buscar qualquer faixa abaixo.
         </div>
       )}
 
@@ -117,14 +119,18 @@ export default function Ospnm() {
       <section className="review-composer">
         <h3>Nova avaliação de rolê</h3>
 
-        {!selectedTrack && (
+        <TrackPicker
+          userId={user?.id}
+          selectedTrack={selectedTrack}
+          onSelect={pickTrack}
+          onReauthRequired={() => setNeedsReauth(true)}
+        />
+
+        {!selectedTrack && suggestions && suggestions.length > 0 && (
           <>
-            {suggestions === null && <p>Carregando sugestões…</p>}
-            {suggestions && suggestions.length === 0 && isLastfmConfigured && !needsReauth && (
-              <p>Nenhuma música do batidão no seu histórico recente ainda — vai ouvir umas paradas e volta aqui.</p>
-            )}
+            <p className="dsp-note">Sugestões da linha do batidão no seu histórico recente:</p>
             <div className="track-list">
-              {suggestions?.map((track) => (
+              {suggestions.map((track) => (
                 <div key={track.id} className="track-row-clickable" onClick={() => pickTrack(track)}>
                   <TrackRow track={track} />
                 </div>
@@ -135,15 +141,6 @@ export default function Ospnm() {
 
         {selectedTrack && (
           <div className="review-form">
-            <TrackRow
-              track={selectedTrack}
-              actions={
-                <button className="btn-ghost" onClick={() => setSelectedTrack(null)}>
-                  Trocar
-                </button>
-              }
-            />
-
             <label className="field-label">
               Quão bom foi se passar
               <Stars value={stars} onChange={setStars} />

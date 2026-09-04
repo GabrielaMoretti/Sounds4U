@@ -4,15 +4,17 @@ import { useAuth } from '../context/AuthContext'
 import { listAcceptedFriendIds } from '../lib/friendsApi'
 import { listFeed, createPost, getEngagement } from '../lib/postsApi'
 import { listReviewsForUsers, upsertReview } from '../lib/reviewsApi'
+import { listOspnmForUsers } from '../lib/ospnmApi'
 import TrackPicker from '../components/TrackPicker'
 import FeedPost from '../components/FeedPost'
 import FeedReviewItem from '../components/FeedReviewItem'
+import FeedOspnmItem from '../components/FeedOspnmItem'
 import Stars from '../components/Stars'
 
-function mergeSorted(posts, reviews) {
-  return [...posts, ...reviews].sort(
-    (a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt)
-  )
+function mergeSorted(...groups) {
+  return groups
+    .flat()
+    .sort((a, b) => new Date(b.createdAt ?? b.updatedAt) - new Date(a.createdAt ?? a.updatedAt))
 }
 
 export default function Feed() {
@@ -33,13 +35,17 @@ export default function Feed() {
     if (!user) return
     try {
       const ids = scope === 'friends' ? [user.id, ...(await listAcceptedFriendIds(user.id))] : null
-      const [feedPosts, feedReviews] = await Promise.all([listFeed(ids), listReviewsForUsers(ids)])
-      setItems(mergeSorted(feedPosts, feedReviews))
+      const [feedPosts, feedReviews, feedOspnm] = await Promise.all([
+        listFeed(ids),
+        listReviewsForUsers(ids),
+        listOspnmForUsers(ids),
+      ])
+      setItems(mergeSorted(feedPosts, feedReviews, feedOspnm))
       setEngagement(await getEngagement(feedPosts.map((p) => p.id), user.id))
 
       // First time we see an empty friends feed, nudge to Descobrir so new users aren't
       // staring at a blank page.
-      if (scope === 'friends' && feedPosts.length === 0 && feedReviews.length === 0 && !autoSwitched) {
+      if (scope === 'friends' && feedPosts.length === 0 && feedReviews.length === 0 && feedOspnm.length === 0 && !autoSwitched) {
         setAutoSwitched(true)
         setScope('discover')
       }
@@ -157,13 +163,19 @@ export default function Feed() {
           <p>Nada dos seus amigos ainda — adicione alguém ou dá uma olhada em Descobrir.</p>
         )}
         {items.length === 0 && scope === 'discover' && <p>Ninguém postou nada ainda.</p>}
-        {items.map((item) =>
-          item.type === 'review' ? (
-            <FeedReviewItem key={`review-${item.id}`} review={item} />
-          ) : (
-            <FeedPost key={`post-${item.id}`} post={item} userId={user.id} engagement={engagement[item.id]} onChanged={refresh} />
+        {items.map((item) => {
+          if (item.type === 'review') return <FeedReviewItem key={`review-${item.id}`} review={item} />
+          if (item.type === 'ospnm') return <FeedOspnmItem key={`ospnm-${item.id}`} entry={item} />
+          return (
+            <FeedPost
+              key={`post-${item.id}`}
+              post={item}
+              userId={user.id}
+              engagement={engagement[item.id]}
+              onChanged={refresh}
+            />
           )
-        )}
+        })}
       </section>
     </div>
   )
