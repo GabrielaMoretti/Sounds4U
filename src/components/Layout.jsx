@@ -10,6 +10,7 @@ const navItems = [
   { to: '/search', label: 'Buscar' },
   { to: '/friends', label: 'Amigos' },
   { to: '/messages', label: 'Mensagens' },
+  { to: '/ospnm', label: 'OSPNM' },
 ]
 
 export default function Layout() {

@@ -644,6 +644,28 @@ button {
   background: var(--surface);
 }
 
+.ospnm-presented-by {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0 0 2px;
+}
+
+.ospnm-entry {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.ospnm-entry-meta {
+  display: flex;
+  gap: 16px;
+  margin: 8px 0 4px;
+  font-size: 1.1rem;
+}
+
 .recommend-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
