@@ -48,7 +48,10 @@ export default function TasteMapCanvas({ nodes, edges, selectedIds = [], onNodeC
             const b = simNodes[j]
             let dx = a.x - b.x
             let dy = a.y - b.y
-            const distSq = dx * dx + dy * dy || 0.01
+            // Clamp the minimum distance — without it, two nodes landing right on top of each
+            // other make the inverse-square force spike toward infinity and the whole layout
+            // "explodes" for a frame instead of settling.
+            const distSq = Math.max(dx * dx + dy * dy, 36)
             const dist = Math.sqrt(distSq)
             const force = 1100 / distSq
             dx /= dist
@@ -90,6 +93,13 @@ export default function TasteMapCanvas({ nodes, edges, selectedIds = [], onNodeC
           n.vy += (HEIGHT / 2 - n.y) * 0.0015
           n.vx *= 0.82
           n.vy *= 0.82
+          // Hard speed cap as a second safety net — keeps a single bad frame from flinging a
+          // node way off (which otherwise takes several frames of damping to recover from).
+          const speed = Math.hypot(n.vx, n.vy)
+          if (speed > 40) {
+            n.vx = (n.vx / speed) * 40
+            n.vy = (n.vy / speed) * 40
+          }
           n.x += n.vx
           n.y += n.vy
         }

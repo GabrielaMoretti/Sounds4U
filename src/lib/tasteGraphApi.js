@@ -71,6 +71,33 @@ export async function getUserTasteEntries(userId) {
   return [...byId.values()]
 }
 
+// Picks the heaviest node in each group as a "hub" and connects everyone else to it — O(n)
+// instead of comparing every pair, and reads a lot cleaner than a dense clique once a group
+// gets past a handful of tracks. `keyFn` returns the group key(s) a node belongs to.
+function hubEdges(nodes, keyFn, kind) {
+  const groups = new Map()
+  for (const n of nodes) {
+    for (const key of keyFn(n)) {
+      if (!key) continue
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(n)
+    }
+  }
+  const edges = []
+  for (const group of groups.values()) {
+    if (group.length < 2) continue
+    const hub = group.reduce((max, n) => (n.weight > max.weight ? n : max), group[0])
+    for (const n of group) {
+      if (n.id !== hub.id) edges.push({ source: hub.id, target: n.id, kind })
+    }
+  }
+  return edges
+}
+
+function pairKey(a, b) {
+  return [a, b].sort().join('__')
+}
+
 // Builds a node/edge graph connecting tracks that share an artist or an album.
 // `entries` items may carry an `owner` tag ('me' | 'friend') for future two-person comparisons —
 // when a track appears from both sides its weight and owner are merged.
@@ -87,6 +114,7 @@ export function buildTasteGraph(entries, { maxNodes = 150 } = {}) {
     }
   }
 
+  const truncated = byTrack.size > maxNodes
   const nodes = [...byTrack.values()]
     .sort((a, b) => b.weight - a.weight)
     .slice(0, maxNodes)
@@ -98,20 +126,13 @@ export function buildTasteGraph(entries, { maxNodes = 150 } = {}) {
       owner: n.owners.size > 1 ? 'both' : [...n.owners][0],
     }))
 
-  const edges = []
-  for (let i = 0; i < nodes.length; i++) {
-    const artistsA = nodes[i].track.artist.split(', ')
-    for (let j = i + 1; j < nodes.length; j++) {
-      const b = nodes[j].track
-      const sharedAlbum = Boolean(nodes[i].track.album) && nodes[i].track.album === b.album
-      const sharedArtist = artistsA.some((name) => b.artist.split(', ').includes(name))
-      if (sharedAlbum || sharedArtist) {
-        edges.push({ source: nodes[i].id, target: nodes[j].id, kind: sharedAlbum ? 'album' : 'artist' })
-      }
-    }
-  }
+  const albumEdges = hubEdges(nodes, (n) => (n.track.album ? [n.track.album] : []), 'album')
+  const seenPairs = new Set(albumEdges.map((e) => pairKey(e.source, e.target)))
+  const artistEdges = hubEdges(nodes, (n) => n.track.artist.split(', ').map((a) => a.trim()), 'artist').filter(
+    (e) => !seenPairs.has(pairKey(e.source, e.target))
+  )
 
-  return { nodes, edges }
+  return { nodes, edges: [...albumEdges, ...artistEdges], truncated, totalTracks: byTrack.size }
 }
 
 function jaccard(a, b) {

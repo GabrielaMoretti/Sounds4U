@@ -108,10 +108,11 @@ export default function TasteMap() {
     return crossRecommend(friendEntries, entries, tagsByArtist, 6)
   }, [comparing, entries, friendEntries, tagsByArtist])
 
-  // Comparing merges two people's whole listening — the default cap (tuned for one person's
-  // map) cuts off way too early once there are two sets of tracks to fit in.
+  // Comparing merges two people's whole listening, so it gets a higher cap than the solo map —
+  // but the physics repulsion is O(n²) per frame, so this can't just go arbitrarily high without
+  // the map turning janky.
   const graph = useMemo(
-    () => (combinedEntries ? buildTasteGraph(combinedEntries, { maxNodes: comparing ? 400 : 150 }) : null),
+    () => (combinedEntries ? buildTasteGraph(combinedEntries, { maxNodes: comparing ? 250 : 150 }) : null),
     [combinedEntries, comparing]
   )
   const entryById = useMemo(() => mergeEntriesById(combinedEntries ?? []), [combinedEntries])
@@ -306,6 +307,13 @@ export default function TasteMap() {
               onNodeClick={handleSelect}
             />
           </div>
+          {graph.truncated && (
+            <p className="dsp-note">
+              Mostrando as {graph.nodes.length} músicas com mais interação de {graph.totalTracks} no
+              total — mantém o mapa fluido. A % de compatibilidade e as recomendações já usam tudo,
+              sem esse corte.
+            </p>
+          )}
           <div className="taste-map-toolbar">
             {comparing && (
               <div className="genre-legend">
