@@ -91,9 +91,10 @@ export default function Ospnm() {
     <div className="page">
       <p className="ospnm-presented-by">Um oferecimento Chope de Vinho Feat Skol Beats</p>
       <h2>OSPNM</h2>
+      <p className="ospnm-acronym">O Quanto Nos Passamos Nessa Música</p>
       <p className="dsp-note">
-        O Quanto Nós Passamos Nessa Música. Só entra faixa da linha do batidão — funk, eletrofunk
-        e afins — puxadas do seu histórico de escuta recente.
+        Só entra faixa da linha do batidão — funk, eletrofunk e afins — puxadas do seu histórico
+        de escuta recente.
       </p>
       {error && <div className="notice">{error}</div>}
 

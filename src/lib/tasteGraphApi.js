@@ -109,6 +109,26 @@ function primaryArtistOf(track) {
   return track.artist.split(', ')[0]
 }
 
+function allArtistsOf(track) {
+  return track.artist.split(', ').map((a) => a.trim())
+}
+
+// Spotify hands out different track IDs for what's really "the same song" all the time — a
+// single vs. the album cut, a remaster, a regional release. Comparing by exact ID alone
+// undercounts real overlap, so compatibility/recommendations key on normalized title+artist
+// instead (everywhere else in the app, exact ID is still correct and stays as-is).
+function normalizeForMatch(s) {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+}
+
+function trackKey(track) {
+  return `${normalizeForMatch(track.name)}::${normalizeForMatch(primaryArtistOf(track))}`
+}
+
 // A "genre fingerprint" for a person: how many of their tracks fall under each tag, across
 // their whole listening — this is the "ecosystem" signal, not just exact matches.
 function buildGenreProfile(entries, tagsByArtist) {
@@ -143,10 +163,10 @@ function cosineSimilarity(freqA, freqB) {
 // Track/artist overlap add on top as a bonus for literal matches. `tagsByArtist` is optional
 // (Map<artistName, string[]>, from lastfmApi) — without it the score falls back to overlap only.
 export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
-  const myTracks = new Set(myEntries.map((e) => e.track.id))
-  const friendTracks = new Set(friendEntries.map((e) => e.track.id))
-  const myArtists = new Set(myEntries.map((e) => primaryArtistOf(e.track)))
-  const friendArtists = new Set(friendEntries.map((e) => primaryArtistOf(e.track)))
+  const myTracks = new Set(myEntries.map((e) => trackKey(e.track)))
+  const friendTracks = new Set(friendEntries.map((e) => trackKey(e.track)))
+  const myArtists = new Set(myEntries.flatMap((e) => allArtistsOf(e.track)))
+  const friendArtists = new Set(friendEntries.flatMap((e) => allArtistsOf(e.track)))
 
   const trackScore = jaccard(myTracks, friendTracks)
   const artistScore = jaccard(myArtists, friendArtists)
@@ -171,7 +191,7 @@ export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
 // amigo que você provavelmente vai curtir". Works without Last.fm too, just falls back to
 // ranking purely by the other person's own enthusiasm.
 export function crossRecommend(baseEntries, candidateEntries, tagsByArtist, limit = 8) {
-  const baseTrackIds = new Set(baseEntries.map((e) => e.track.id))
+  const baseTrackKeys = new Set(baseEntries.map((e) => trackKey(e.track)))
   const baseProfile = buildGenreProfile(baseEntries, tagsByArtist)
 
   function score(entry) {
@@ -183,7 +203,7 @@ export function crossRecommend(baseEntries, candidateEntries, tagsByArtist, limi
   }
 
   return candidateEntries
-    .filter((e) => !baseTrackIds.has(e.track.id))
+    .filter((e) => !baseTrackKeys.has(trackKey(e.track)))
     .map((e) => ({ entry: e, score: score(e) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)

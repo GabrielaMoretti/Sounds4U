@@ -644,12 +644,41 @@ button {
   background: var(--surface);
 }
 
+.bottle {
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.3;
+  transform: scale(0.9);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.bottle.filled {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
 .ospnm-presented-by {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.72rem;
   color: var(--text-dim);
   margin: 0 0 2px;
+}
+
+.ospnm-acronym {
+  font-style: italic;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+.ospnm-acronym {
+  font-style: italic;
+  color: var(--text-dim);
+  margin: 0 0 12px;
 }
 
 .ospnm-entry {

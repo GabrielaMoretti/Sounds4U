@@ -5,9 +5,10 @@ export default function Bottles({ value, onChange }) {
         <button
           key={n}
           type="button"
-          className={`star${n <= value ? ' filled' : ''}`}
+          className={`bottle${n <= value ? ' filled' : ''}`}
           onClick={() => onChange(n)}
           aria-label={`${n} garrafas`}
+          aria-pressed={n <= value}
         >
           🍾
         </button>
