@@ -115,8 +115,8 @@ function allArtistsOf(track) {
 
 // Spotify hands out different track IDs for what's really "the same song" all the time — a
 // single vs. the album cut, a remaster, a regional release. Comparing by exact ID alone
-// undercounts real overlap, so compatibility/recommendations key on normalized title+artist
-// instead (everywhere else in the app, exact ID is still correct and stays as-is).
+// undercounts real overlap, so compatibility/recommendations match on title + artist instead
+// (everywhere else in the app, exact ID is still correct and stays as-is).
 function normalizeForMatch(s) {
   return s
     .toLowerCase()
@@ -125,8 +125,32 @@ function normalizeForMatch(s) {
     .trim()
 }
 
-function trackKey(track) {
-  return `${normalizeForMatch(track.name)}::${normalizeForMatch(primaryArtistOf(track))}`
+function normalizedArtistsOf(track) {
+  return allArtistsOf(track).map(normalizeForMatch)
+}
+
+// Same song if the title matches AND at least one artist overlaps — checking the whole artist
+// list (not just whoever's listed first) matters a lot for collabs/feats., which credit the
+// same song differently release to release (very common in funk/eletrofunk).
+function tracksMatch(a, b) {
+  if (normalizeForMatch(a.name) !== normalizeForMatch(b.name)) return false
+  const artistsB = normalizedArtistsOf(b)
+  return normalizedArtistsOf(a).some((name) => artistsB.includes(name))
+}
+
+// Greedily pairs up each of my tracks with an unused matching track on the other side —
+// avoids double-counting when someone has the same song saved under two different IDs.
+function countSharedTracks(myEntries, friendEntries) {
+  const used = new Array(friendEntries.length).fill(false)
+  let count = 0
+  for (const mine of myEntries) {
+    const idx = friendEntries.findIndex((f, i) => !used[i] && tracksMatch(mine.track, f.track))
+    if (idx !== -1) {
+      used[idx] = true
+      count += 1
+    }
+  }
+  return count
 }
 
 // A "genre fingerprint" for a person: how many of their tracks fall under each tag, across
@@ -163,12 +187,13 @@ function cosineSimilarity(freqA, freqB) {
 // Track/artist overlap add on top as a bonus for literal matches. `tagsByArtist` is optional
 // (Map<artistName, string[]>, from lastfmApi) — without it the score falls back to overlap only.
 export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
-  const myTracks = new Set(myEntries.map((e) => trackKey(e.track)))
-  const friendTracks = new Set(friendEntries.map((e) => trackKey(e.track)))
-  const myArtists = new Set(myEntries.flatMap((e) => allArtistsOf(e.track)))
-  const friendArtists = new Set(friendEntries.flatMap((e) => allArtistsOf(e.track)))
+  const myArtists = new Set(myEntries.flatMap((e) => normalizedArtistsOf(e.track)))
+  const friendArtists = new Set(friendEntries.flatMap((e) => normalizedArtistsOf(e.track)))
 
-  const trackScore = jaccard(myTracks, friendTracks)
+  const sharedTracks = countSharedTracks(myEntries, friendEntries)
+  const trackUnion = myEntries.length + friendEntries.length - sharedTracks
+  const trackScore = trackUnion === 0 ? 0 : sharedTracks / trackUnion
+
   const artistScore = jaccard(myArtists, friendArtists)
   const genreScore = tagsByArtist
     ? cosineSimilarity(buildGenreProfile(myEntries, tagsByArtist), buildGenreProfile(friendEntries, tagsByArtist))
@@ -178,8 +203,6 @@ export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
     ? Math.round((genreScore * 0.5 + artistScore * 0.3 + trackScore * 0.2) * 100)
     : Math.round((artistScore * 0.6 + trackScore * 0.4) * 100)
 
-  let sharedTracks = 0
-  for (const id of myTracks) if (friendTracks.has(id)) sharedTracks += 1
   let sharedArtists = 0
   for (const name of myArtists) if (friendArtists.has(name)) sharedArtists += 1
 
@@ -191,7 +214,6 @@ export function computeCompatibility(myEntries, friendEntries, tagsByArtist) {
 // amigo que você provavelmente vai curtir". Works without Last.fm too, just falls back to
 // ranking purely by the other person's own enthusiasm.
 export function crossRecommend(baseEntries, candidateEntries, tagsByArtist, limit = 8) {
-  const baseTrackKeys = new Set(baseEntries.map((e) => trackKey(e.track)))
   const baseProfile = buildGenreProfile(baseEntries, tagsByArtist)
 
   function score(entry) {
@@ -203,7 +225,7 @@ export function crossRecommend(baseEntries, candidateEntries, tagsByArtist, limi
   }
 
   return candidateEntries
-    .filter((e) => !baseTrackKeys.has(trackKey(e.track)))
+    .filter((e) => !baseEntries.some((b) => tracksMatch(b.track, e.track)))
     .map((e) => ({ entry: e, score: score(e) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
