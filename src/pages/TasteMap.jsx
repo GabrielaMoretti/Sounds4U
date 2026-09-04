@@ -108,7 +108,12 @@ export default function TasteMap() {
     return crossRecommend(friendEntries, entries, tagsByArtist, 6)
   }, [comparing, entries, friendEntries, tagsByArtist])
 
-  const graph = useMemo(() => (combinedEntries ? buildTasteGraph(combinedEntries) : null), [combinedEntries])
+  // Comparing merges two people's whole listening — the default cap (tuned for one person's
+  // map) cuts off way too early once there are two sets of tracks to fit in.
+  const graph = useMemo(
+    () => (combinedEntries ? buildTasteGraph(combinedEntries, { maxNodes: comparing ? 400 : 150 }) : null),
+    [combinedEntries, comparing]
+  )
   const entryById = useMemo(() => mergeEntriesById(combinedEntries ?? []), [combinedEntries])
 
   // Fetch tags for every artist across both people's full listening (not just the graph's

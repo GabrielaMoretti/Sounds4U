@@ -14,12 +14,29 @@ function trackFromRow(row) {
 }
 
 // One entry per distinct track the user has interacted with, combining plays/reviews/posts.
+// Explicit .limit() + .order() so we get the most recent rows first instead of silently
+// relying on (and getting truncated by) the database's own default row cap.
 export async function getUserTasteEntries(userId) {
   const [{ data: plays, error: playsError }, { data: reviews, error: reviewsError }, { data: posts, error: postsError }] =
     await Promise.all([
-      supabase.from('listening_history').select('track_id, played_at, tracks(*)').eq('user_id', userId),
-      supabase.from('reviews').select('track_id, rating, body, tracks(*)').eq('user_id', userId),
-      supabase.from('posts').select('track_id, tracks(*)').eq('user_id', userId),
+      supabase
+        .from('listening_history')
+        .select('track_id, played_at, tracks(*)')
+        .eq('user_id', userId)
+        .order('played_at', { ascending: false })
+        .limit(2000),
+      supabase
+        .from('reviews')
+        .select('track_id, rating, body, tracks(*)')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(2000),
+      supabase
+        .from('posts')
+        .select('track_id, tracks(*)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(2000),
     ])
   if (playsError) throw playsError
   if (reviewsError) throw reviewsError
